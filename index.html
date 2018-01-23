@@ -1,0 +1,631 @@
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <title>Point on a map D3</title>
+    <script src="http://d3js.org/d3.v3.min.js"
+      charset="utf-8"></script>
+    <link rel="stylesheet" href="styles/main.css" type="text/css" />
+  </head>
+
+  <body>
+	   <h1>When is Player Efficiency Rating (PER) useful in the NBA?</h1>
+</body>
+</html>
+ -->
+
+
+ <!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+
+<!-- Example based on http://bl.ocks.org/mbostock/3887118 -->
+<!-- Tooltip example from http://www.d3noob.org/2013/01/adding-tooltips-to-d3js-graph.html -->
+<!-- Coding style based on http://gist.github.com/mbostock/5977197 -->
+
+<style>
+svg {
+    display: block;
+    margin: 0 auto;
+}
+
+body {
+  font: 11px sans-serif;
+}
+
+div {
+    padding-left: 250px;
+}
+
+p {
+  font-family: Optima;
+  padding-left: 250px;
+  padding-right: 250px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+}
+
+.dot2 {
+  stroke: #050;
+}
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.topnav {
+  overflow: hidden;
+  background-color: white;
+}
+
+.topnav .menu {
+  float: right;
+  color: black;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.topnav a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.topnav a.active {
+  background-color: #ddd;
+  color: black;
+}
+</style>
+<head>
+  <title>PER Graph of Stars</title>
+    <script src="http://d3js.org/d3.v4.min.js"></script>
+    <script src="numbers.js"></script>
+    <link rel="stylesheet" href="styles/main.css" type="text/css" />
+</head>
+<body>
+<script src="http://d3js.org/d3.v4.min.js"></script>
+     <h1 style="font-size:36px">At What Age Do NBA Players Perform Best?</h1>
+     <br>
+     <p style="font-size:18px">When analyzing basketball players, it is nice to know when they will perform at their prime. One variable to examine is at what age does each player play the best basketball. This information can be extremely helpful in finding NBA trade prospects or predicting Fantasy Basketball pickups and drafts.</p>
+     
+     <p style="font-size:18px">Below, the first graph depicting 10 extremely popular and renowned basketball players throughout the years. The data plotted is based on the Player Efficiency Rating (PER). There is some skepticism on its effectiveness because it is based on the amount of minutes played by each player, but the PER of each player plotted has played ample minutes where their PER more accurately matches their level of play. Each player line plots their PER against their age (how well they performed at a certain age). You can select each player individually to see how each player performed through the drop-down selection bar.</p>
+
+     <p style="font-size:18px">The second graph takes the PER and age of each player and plots each point. At every age, the median is taken to show the average PER for each player at that age for ages 19 to 31. The median is used instead of the mean to eliminate any outliers, such as injuries. Using medians for every age is better than a regression (of any degree polynomial) because the fit will be bad due to the amount of players per age variable; the regression will not give valuable information about what age an NBA player performs best. The median is then connected with a red line to extrapolate how an average super star player performs at each age.</p>
+     
+     <div>
+     <select id="selector"></select>
+     </div>
+<script>
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+/* 
+ * value accessor - returns the value to encode for a given data object.
+ * scale - maps value to a visual display encoding, such as a pixel position.
+ * map function - maps from data value to display value
+ * axis - sets up axis
+ */ 
+
+
+// setup x 
+var xValue = function(d) { return d.age;}, // data -> value
+    xScale = d3.scaleLinear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}, // data -> display
+    xAxis = d3.axisBottom().scale(xScale)
+      .ticks(5);
+
+// setup y
+var yValue = function(d) { return d.per;}, // data -> value
+    yScale = d3.scaleLinear().range([height, 0]),// value -> display
+    yMap = function(d) { return yScale(yValue(d));}, // data -> display
+    yAxis = d3.axisLeft().scale(yScale)
+      .ticks(5);
+
+
+// var line = d3.line()
+//   .x(function(d) {return x(d.age); })
+//   .y(function(d) {return y(d.per); });
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var svg2 = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    // .on("mouseover", function(d){
+    //   d3.select(this).raise()
+    //     .append("text")
+    //     .attr("class", "playername")
+    //     .text("Dwayne Wade");
+    // })
+    // .on("mouseout", function(d){
+    //   d3.selectAll("text.palyername").remove();
+    // });
+// add the tooltip area to the webpage
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+var test = d3.line()
+    // .curve(d3.curveBasis)
+    .x(function(d){ return xScale(d.age); })
+    .y(function(d){ return yScale(d.per); });
+
+var stephLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.stephPER))
+     return !isNaN(d.stephPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.stephPER); });
+
+var jamesLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.jamesPER))
+     return !isNaN(d.jamesPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.jamesPER); });
+
+var durantLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.durantPER))
+     return !isNaN(d.durantPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.durantPER); });
+
+var jordanLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.jordanPER))
+     return !isNaN(d.jordanPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.jordanPER); });
+
+var wadeLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.wadePER))
+     return !isNaN(d.wadePER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.wadePER); });
+
+var birdLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.birdPER))
+     return !isNaN(d.birdPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.birdPER); });
+
+var shaqLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.shaqPER))
+     return !isNaN(d.shaqPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.shaqPER); });
+
+var duncanLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.duncanPER))
+     return !isNaN(d.duncanPER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.duncanPER); });
+
+var cp3Line = d3.line()
+    .defined(function(d) { console.log(isNaN(d.cp3PER))
+     return !isNaN(d.cp3PER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.cp3PER); });
+
+var kobeLine = d3.line()
+    .defined(function(d) { console.log(isNaN(d.kobePER))
+     return !isNaN(d.kobePER); })
+    .x(function(d) { return xScale(d.age); })
+    .y(function(d) { return yScale(d.kobePER); });
+
+var arr = [];
+var dict = {};
+var dictMed = {};
+var arrAge = [];
+var arrPer = [];
+var medData = [];
+
+function median(values) {
+
+    values.sort( function(a,b) {return a - b;} );
+
+    var half = Math.floor(values.length/2);
+
+    if(values.length % 2)
+        return values[half];
+    else
+        return (values[half-1] + values[half]) / 2.0;
+}
+// load data
+var count = 0;
+d3.csv("curry2.csv", function(error, data) {
+  // change string (from CSV) into number format
+  data.forEach(function(d) {
+    d.stephPER = +d.stephPER;
+    d.jamesPER = +d.jamesPER;
+    d.durantPER = +d.durantPER;
+    d.jordanPER = +d.jordanPER;
+    d.cp3PER = +d.cp3PER;
+    d.wadePER = +d.wadePER;
+    d.birdPER = +d.birdPER;
+    d.shaqPER = +d.shaqPER;
+    d.duncanPER = +d.duncanPER;
+    d.kobePER = +d.kobePER;
+    d.age = +d.age;
+    dict[d.age] = [];
+    if(!isNaN(d.stephPER)) { dict[d.age].push(d.stephPER); }
+    if(!isNaN(d.jamesPER)) { dict[d.age].push(d.jamesPER); }
+    if(!isNaN(d.durantPER)) { dict[d.age].push(d.durantPER); }
+    if(!isNaN(d.jordanPER)) { dict[d.age].push(d.jordanPER); }
+    if(!isNaN(d.cp3PER)) { dict[d.age].push(d.cp3PER); }
+    if(!isNaN(d.wadePER)) { dict[d.age].push(d.wadePER); }
+    if(!isNaN(d.birdPER)) { dict[d.age].push(d.birdPER); }
+    if(!isNaN(d.shaqPER)) { dict[d.age].push(d.shaqPER); }
+    if(!isNaN(d.kobePER)) { dict[d.age].push(d.kobePER); }
+    if(!isNaN(d.duncanPER)) { dict[d.age].push(d.duncanPER); }
+    dictMed[count] = {"age": d.age, "per": median(dict[d.age])};
+    count = count + 1;
+    medData.push({'age' : d.age, 'per' : median(dict[d.age])})
+    arrAge.push(d.age);
+    arrPer.push(median(dict[d.age]));
+  }); 
+
+  // don't want dots overlapping axis, so add in buffer to data domain
+  xScale.domain([d3.min(data, xValue), d3.max(data, xValue)+1]);
+  yScale.domain([0, d3.max(data, function(d) {
+    return Math.max(d.stephPER, d.jamesPER, d.durantPER) + 1; })]);
+
+  // x-axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+  
+  svg.append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", height - 6)
+      .style("text-anchor", "end")
+      .text("Age");
+
+  // y-axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    
+  svg.append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("PER (Player Efficiency Rating)");
+
+  var players = ["All", "Stephen Curry", "Lebron James", "Kevin Durant", "Michael Jordan", "Dwayne Wade", "Larry Bird", "Shaquille O'Neal", "Tim Duncan", "Chris Paul", "Kobe Bryant"];
+  var selector = d3.select("#selector");
+
+  selector
+    .selectAll("option")
+    .data(players)
+    .enter()
+    .append("option")
+      .text(function(d){ return d; })
+      .attr("value", function(d){ return d; });
+
+  selector
+    .on("change", function(){
+        d3.selectAll("path")
+          .attr("opacity", 1.0);
+        var value = selector.property("value");
+        console.log(value);
+        if(value == "Lebron James"){
+          d3.selectAll(".line")
+           .attr("opacity", 0.1);
+          d3.select(".jamesLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Stephen Curry"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".stephLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Kevin Durant"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".durantLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Michael Jordan"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".jordanLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Dwayne Wade"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".wadeLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Larry Bird"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".birdLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Shaquille O'Neal"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".shaqLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Tim Duncan"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".duncanLine")
+            .attr("opacity", 1.0);
+        } else if(value == "Chris Paul"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".cp3Line")
+            .attr("opacity", 1.0);
+        } else if(value == "Kobe Bryant"){
+          d3.selectAll(".line")
+            .attr("opacity", 0.1);
+          d3.select(".kobeLine")
+            .attr("opacity", 1.0);
+        } 
+
+    });
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("stephLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", stephLine);
+
+  // Add the valueline2 path.
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("jamesLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", jamesLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("durantLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "orange")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", durantLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("jordanLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "green")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", jordanLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("wadeLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", wadeLine)
+      // .on("mouseover", function(d){
+      //   d3.select(this)
+      //     .append("text")
+      //     .text("Dwayne Wade");
+      // });
+
+    // var mouseG = svg.append("g")
+    //   .attr("class", "mouse-over-effects");
+
+    // mouseG.append("path") // this is the black vertical line to follow mouse
+    //   .attr("class", "mouse-line")
+    //   .style("stroke", "black")
+    //   .style("stroke-width", "1px")
+    //   .style("opacity", "0");
+
+    // mouseG.append('svg:rect') // append a rect to catch mouse movements on canvas
+    //   .attr('width', width) // can't catch mouse events on a g element
+    //   .attr('height', height)
+    //   .attr('fill', 'none')
+    //   .attr('pointer-events', 'all')
+    //   .on('mouseout', function() { // on mouse out hide line, circles and text
+    //     d3.select(".mouse-line")
+    //       .style("opacity", "0");
+    //     d3.selectAll(".mouse-per-line circle")
+    //       .style("opacity", "0");
+    //     d3.selectAll(".mouse-per-line text")
+    //       .style("opacity", "0");
+    //   })
+    //   .on('mouseover', function() { // on mouse in show line, circles and text
+    //     d3.select(".mouse-line")
+    //       .style("opacity", "1");
+    //     d3.selectAll(".mouse-per-line circle")
+    //       .style("opacity", "1");
+    //     d3.selectAll(".mouse-per-line text")
+    //       .style("opacity", "1");
+    //   })
+    //   .on('mousemove', function() { // mouse moving over canvas
+    //     var mouse = d3.mouse(this);
+    //     d3.select(".mouse-line")
+    //       .attr("d", function() {
+    //         var d = "M" + mouse[0] + "," + height;
+    //         d += " " + mouse[0] + "," + 0;
+    //         return d;
+    //       });
+    //     });
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("birdLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "brown")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", birdLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("shaqLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "yellow")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", shaqLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("duncanLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "purple")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", duncanLine);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("cp3Line", true)
+      .attr("fill", "none")
+      .attr("stroke", "blue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", cp3Line);
+
+  svg.append("path")
+      .data([data])
+      .classed("line", true)
+      .classed("kobeLine", true)
+      .attr("fill", "none")
+      .attr("stroke", "grey")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", kobeLine);
+});
+
+d3.csv("agePerData.csv", function(error, data) {
+
+  data.forEach(function(d) {
+    d.age = +d.age;
+    d.per = +d.per;
+  }); 
+
+  xScale.domain([d3.min(data, xValue), d3.max(data, xValue) + 1]);
+  yScale.domain([0, d3.max(data, yValue) + 1]);
+
+  // x-axis
+  svg2.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+  
+  svg2.append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", height - 6)
+      .style("text-anchor", "end")
+      .text("Age");
+
+  // y-axis
+  svg2.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    
+  svg2.append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("PER (Player Efficiency Rating)");
+ 
+
+  // svg2.selectAll(".dot")
+  //     .data(data)
+  //     .enter().append("circle")
+  //     .attr("r", 3)
+  //     .attr("cx", function(d) { return xScale(d.age); })
+  //     .attr("cy", function(d) { return yScale(d.per); })
+  //     .on("mouseover", function(d){
+  //       d3.select(this)
+  //         .append("text")
+  //         .text("Dwayne Wade");
+  //     });
+
+  svg2.selectAll("g")
+      .data(data)
+      .enter()
+      .append("g")
+        .attr("class", "per")
+        .attr("transform", function(d){
+          return "translate(" + xScale(d.age) + "," + yScale(d.per) + ")";
+        })
+      // .on("mouseover", function(d){
+      //   d3.select(this)
+      //     .append("text").raise()
+      //     .attr("class", "playername")
+      //     .text("Dwayne Wade");
+      // })
+      // .on("mouseout", function(d){
+      //   d3.selectAll("text.playername").remove();
+      // })
+      .append("circle")
+      .attr("r", 3.5);
+
+
+  svg2.append("path")
+    .attr('d', test(medData))
+    .attr("fill", "none")
+    .attr("stroke", "red")
+    // .attr("stroke-linejoin", "round")
+    // .attr("stroke-linecap", "round")
+    .attr("stroke-width", 4);
+
+  console.log(medData);
+});
+
+</script>
+
+<p style="font-size:18px">With this extrapolation, it seems that NBA super star players have the best PER at 27 years old. This means that if an NBA player is elite, they are going to perform their best at 27 years old. This can be taken account for in your next Fantast Basketball draft, or when to try to trade for a super star. Note that this does not apply to all of the NBA players. The players were selected based on their all time performance and if they have played enough years to provide useful results. Some players like Kawhi Leonard, Russel Westbrook, and James Harden are left out because they were too young. </p>
+
+<p style="font-size:18px">All of this data was obtained from the data.world database (up to 2016) and resorted. The D3 javascript library was used to plot the data and draw these data visualizations.</p>
+</body>
+</html> 

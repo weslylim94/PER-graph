@@ -1,0 +1,15 @@
+body {
+	background: white;
+}
+
+h1 {
+	font-family: Optima;
+	text-align: center;
+	font-size: 32;
+}
+
+p {
+	font-family: Optima;
+	text-align: left;
+	font-size: 18;
+}
